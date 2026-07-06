@@ -1,61 +1,73 @@
 # Vacatures — persoonlijk job search dashboard
 
-Dark-themed dashboard voor het volgen van vacatures, sollicitaties en
+Dark-themed dashboard voor het volgen van vacatures, sollicitaties, taken en
 verbeterpunten (CV, LinkedIn, portfolio).
 
-- **Frontend**: Next.js + Tailwind CSS v4 (statisch exporteerbaar → GitHub Pages), in [web/](web/)
+**Live**: https://elvar-drevos.github.io/vacatures/
+**API**: https://vacatures-api.thomas-schorn-zwolle.workers.dev
+
+- **Frontend**: Next.js + Tailwind CSS v4, statische export → GitHub Pages, in [web/](web/)
 - **Backend**: Cloudflare Worker + D1 (SQLite), in [worker/](worker/)
 - **Login**: één passcode → sessie-token (30 dagen geldig)
+- **PWA**: installeerbaar op telefoon ("Toevoegen aan beginscherm")
+
+## Features
+
+- **Feed** — vacatures verzamelen: handmatig, via RSS-bronnen, en via een
+  dagelijkse automatische zoekrun (cron om 06:00 UTC) die RSS-feeds ophaalt en
+  Indeed/NationaleVacaturebank/Werkzoeken.nl doorzoekt op je zoekprofiel.
+  Let op: die sites blokkeren geautomatiseerd ophalen regelmatig (403) — RSS is
+  de betrouwbare route.
+- **Zoekprofiel** — functie + locatie met elk een aan/uit-schakelaar; filtert de
+  feed én stuurt de zoekrun. "Toon alles" negeert de filters.
+- **Tracker** — sollicitaties per fase (interesse → gesolliciteerd → 1e gesprek
+  → 2e gesprek → aanbod) met status (actief/aangenomen/afgewezen/ingetrokken),
+  notities, taken en vacature-bewerking op de detailpagina.
+- **Taken** — per sollicitatie, met deadline; centraal overzicht onder "Taken".
+- **Checklist** — verbeterpunten per categorie, optioneel dagelijks/wekelijks
+  terugkerend (herhalende items komen na middernacht/maandag automatisch terug).
 
 ## Lokaal draaien
 
-Node.js staat (portable) in `C:\Users\miste\tools\node`. Voeg die map toe aan je
-PATH, of gebruik de volledige paden.
+Node.js staat (portable) in `C:\Users\miste\tools\node` — voeg toe aan PATH of
+gebruik volledige paden.
 
-**Terminal 1 — backend (API op http://127.0.0.1:8787):**
+**Terminal 1 — backend (http://127.0.0.1:8787):**
 ```
 cd worker
 npx wrangler dev --port 8787
 ```
 
-**Terminal 2 — frontend (app op http://localhost:3000):**
+**Terminal 2 — frontend (http://localhost:3000):**
 ```
 cd web
 npm run dev
 ```
 
-Open http://localhost:3000 en log in met de passcode uit
-[worker/.dev.vars](worker/.dev.vars) (standaard: `vacatures2026` — pas dit aan!).
+Passcode voor lokaal staat in `worker/.dev.vars` (niet in git).
 
-### Database
+## Deploy
 
-De lokale database leeft in `worker/.wrangler/state/`. Migraties draaien:
-```
-cd worker
-npm run db:migrate:local
-```
+- **Worker**: `cd worker && npx wrangler deploy` (na `wrangler login`).
+  Migraties naar productie: `npm run db:migrate:remote`.
+  Passcode wijzigen: `npx wrangler secret put PASSCODE`.
+- **Frontend**: push naar `main` — GitHub Actions bouwt en publiceert
+  automatisch naar GitHub Pages ([.github/workflows/deploy-web.yml](.github/workflows/deploy-web.yml)).
+  De API-URL staat als repo-variabele `API_BASE_URL`.
 
-## Structuur
+## Structuur & aanpassen
 
 | Wat | Waar |
 |---|---|
-| Pagina's (feed, tracker, checklist, login) | [web/app/](web/app/) |
-| Herbruikbare UI (Card, Button, Badge, nav) | [web/components/](web/components/) |
+| Pagina's (feed, tracker, taken, checklist, login) | [web/app/](web/app/) |
+| Herbruikbare UI (Card, Button, Toggle, nav) | [web/components/](web/components/) |
 | API-client + types + fases/statussen | [web/lib/](web/lib/) |
 | Kleuren & fonts (accent, dark theme) | [web/app/globals.css](web/app/globals.css) (`@theme` blok) |
 | API-routes | [worker/src/routes/](worker/src/routes/) |
-| Database-schema | [worker/migrations/0001_init.sql](worker/migrations/0001_init.sql) |
+| Site-scrapers | [worker/src/scrapers/](worker/src/scrapers/) |
+| Automatische zoekrun (RSS + scrapers) | [worker/src/zoeken.ts](worker/src/zoeken.ts) |
+| Database-schema | [worker/migrations/](worker/migrations/) |
 
-Sollicitatie-fases: interesse → gesolliciteerd → eerste gesprek → tweede gesprek → aanbod.
-Status (los van fase): actief / aangenomen / afgewezen / ingetrokken.
-Fases/statussen aanpassen: [web/lib/constants.ts](web/lib/constants.ts) + [worker/src/types.ts](worker/src/types.ts).
-
-## Nog te doen (volgende stappen)
-
-- [ ] RSS-import (feeds beheren, preview, importeren) — schema is er al (`rss_feeds`)
-- [ ] Deploy: Worker naar Cloudflare (`wrangler d1 create vacatures-db`, id in
-      `wrangler.toml` zetten, `wrangler secret put PASSCODE`, `npm run db:migrate:remote`,
-      `npx wrangler deploy`)
-- [ ] Deploy: frontend naar GitHub Pages (GitHub Actions workflow, `NEXT_PUBLIC_BASE_PATH`
-      en `NEXT_PUBLIC_API_BASE_URL` instellen, `ALLOWED_ORIGIN` in wrangler.toml aanpassen)
-- [ ] PWA (manifest + iconen) zodat de app op je telefoon installeerbaar is
+Fases/statussen aanpassen: [web/lib/constants.ts](web/lib/constants.ts) +
+[worker/src/types.ts](worker/src/types.ts). PWA-iconen opnieuw genereren:
+`cd web && node scripts/make-icons.mjs`.
