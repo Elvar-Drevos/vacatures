@@ -19,6 +19,40 @@ interface ZoekResultaat {
   fout?: string;
 }
 
+// Herkent of een vacaturetekst op Nederland duidt. Internationale (remote-)feeds
+// vermelden de vereiste locatie vrijwel altijd in de titel of omschrijving.
+const NL_PATROON = new RegExp(
+  [
+    'nederland', 'netherlands', 'dutch', 'benelux', 'holland',
+    'amsterdam', 'rotterdam', 'den haag', 'the hague', 'utrecht', 'eindhoven',
+    'groningen', 'tilburg', 'almere', 'breda', 'nijmegen', 'arnhem', 'haarlem',
+    'zaanstad', 'amersfoort', 'apeldoorn', 'enschede', 'zwolle', 'leiden',
+    'maastricht', 'dordrecht', 'zoetermeer', 'deventer', 'delft', 'leeuwarden',
+  ].join('|'),
+  'i'
+);
+
+function isNederlands(item: KandidaatVacature): boolean {
+  const tekst = `${item.titel} ${item.bedrijf} ${item.locatie ?? ''} ${item.omschrijving ?? ''}`;
+  return NL_PATROON.test(tekst);
+}
+
+// Importfilter: past de actieve zoekprofiel-criteria toe op binnenkomende items,
+// zodat de feed niet volloopt met irrelevante (buitenlandse) vacatures.
+function magImporteren(
+  item: KandidaatVacature,
+  profiel: { functie: string | null; functie_actief: number; alleen_nederland: number },
+  bronIsNederlands = false
+): boolean {
+  // Scrapers halen al van Nederlandse sites; alleen RSS-items NL-checken
+  if (profiel.alleen_nederland && !bronIsNederlands && !isNederlands(item)) return false;
+  if (profiel.functie_actief && profiel.functie) {
+    const tekst = `${item.titel} ${item.omschrijving ?? ''}`.toLowerCase();
+    if (!tekst.includes(profiel.functie.toLowerCase())) return false;
+  }
+  return true;
+}
+
 async function insertAlsNieuw(
   env: Env,
   item: KandidaatVacature,
@@ -47,13 +81,15 @@ export async function zoekAlleBronnen(env: Env): Promise<ZoekResultaat[]> {
       const items = await fetchFeed(feed.url);
       let nieuw = 0;
       for (const item of items) {
-        const toegevoegd = await insertAlsNieuw(
-          env,
-          { titel: item.titel, bedrijf: 'Onbekend', locatie: null, url: item.url, omschrijving: item.samenvatting },
-          'rss',
-          feed.id
-        );
-        if (toegevoegd) nieuw++;
+        const kandidaat: KandidaatVacature = {
+          titel: item.titel,
+          bedrijf: 'Onbekend',
+          locatie: null,
+          url: item.url,
+          omschrijving: item.samenvatting,
+        };
+        if (!magImporteren(kandidaat, profiel)) continue;
+        if (await insertAlsNieuw(env, kandidaat, 'rss', feed.id)) nieuw++;
       }
       await env.DB.prepare(
         "UPDATE rss_feeds SET laatst_opgehaald_op = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?"
@@ -75,6 +111,7 @@ export async function zoekAlleBronnen(env: Env): Promise<ZoekResultaat[]> {
         const items = await scraper.zoek(profiel);
         let nieuw = 0;
         for (const item of items) {
+          if (!magImporteren(item, profiel, true)) continue;
           if (await insertAlsNieuw(env, item, `scrape:${scraper.naam}`, null)) nieuw++;
         }
         resultaten.push({ bron: scraper.naam, gevonden: items.length, nieuw });

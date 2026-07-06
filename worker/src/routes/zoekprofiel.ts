@@ -6,6 +6,7 @@ export interface Zoekprofiel {
   functie_actief: 0 | 1;
   locatie: string | null;
   locatie_actief: 0 | 1;
+  alleen_nederland: 0 | 1;
   bijgewerkt_op: string;
 }
 
@@ -38,6 +39,10 @@ export async function update(req: Request, env: Env): Promise<Response> {
   if ('locatieActief' in b) {
     sets.push('locatie_actief = ?');
     values.push(b.locatieActief ? 1 : 0);
+  }
+  if ('alleenNederland' in b) {
+    sets.push('alleen_nederland = ?');
+    values.push(b.alleenNederland ? 1 : 0);
   }
   if (sets.length === 0) return error('geen velden om bij te werken', 400);
 

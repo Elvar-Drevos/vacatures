@@ -139,6 +139,7 @@ export function updateZoekprofiel(data: {
   functieActief?: boolean;
   locatie?: string;
   locatieActief?: boolean;
+  alleenNederland?: boolean;
 }): Promise<Zoekprofiel> {
   return apiFetch('/api/zoekprofiel', { method: 'PATCH', body: JSON.stringify(data) });
 }

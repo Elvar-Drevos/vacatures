@@ -137,6 +137,11 @@ export default function FeedPage() {
               </div>
             </div>
             <div className="flex flex-col items-start gap-2 pb-0.5">
+              <Toggle
+                checked={!!profiel.alleen_nederland}
+                onChange={(aan) => patchProfiel({ alleenNederland: aan })}
+                label="Alleen Nederland (bij importeren)"
+              />
               <Toggle checked={toonAlles} onChange={wisselAlles} label="Toon alles (negeer filters)" />
               <Button onClick={handleZoekNu} disabled={zoekBezig} small>
                 {zoekBezig ? 'Zoeken…' : '⟳ Zoek nu in alle bronnen'}

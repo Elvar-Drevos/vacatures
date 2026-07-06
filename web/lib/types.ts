@@ -65,6 +65,7 @@ export interface Zoekprofiel {
   functie_actief: 0 | 1;
   locatie: string | null;
   locatie_actief: 0 | 1;
+  alleen_nederland: 0 | 1;
   bijgewerkt_op: string;
 }
 
