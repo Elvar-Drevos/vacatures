@@ -1,0 +1,17 @@
+# dependencies & build output
+node_modules/
+web/.next/
+web/out/
+web/next-env.d.ts
+*.tsbuildinfo
+
+# lokale wrangler-state en secrets
+worker/.wrangler/
+worker/.dev.vars
+
+# lokale env
+web/.env.local
+
+# os
+Thumbs.db
+.DS_Store

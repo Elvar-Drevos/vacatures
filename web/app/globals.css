@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  /* Accent */
+  --color-accent: #ff6823;
+  --color-accent-soft: #ff682333;
+
+  /* Donkere oppervlakken */
+  --color-surface: #0e0e10;
+  --color-card: #17171b;
+  --color-card-hover: #1d1d22;
+  --color-line: #ffffff14;
+  --color-muted: #9b9ba6;
+
+  /* Fonts (gekoppeld aan next/font variabelen in layout.tsx) */
+  --font-heading: var(--font-sora), sans-serif;
+  --font-body: var(--font-dm-sans), sans-serif;
+  --font-mono: var(--font-dm-mono), monospace;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 60% 40% at 70% -10%, #ff682310, transparent),
+    var(--color-surface);
+  color: #ececf1;
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  line-height: 1.25;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}

@@ -1,0 +1,17 @@
+name = "vacatures-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vacatures-db"
+database_id = "aa1cc441-e956-4532-9f7c-db52618eca6d"
+
+[triggers]
+# Dagelijkse zoekrun (RSS + scrapers) om 06:00 UTC
+crons = ["0 6 * * *"]
+
+[vars]
+# Productie-origin (GitHub Pages). Voor lokale dev overschrijft .dev.vars dit
+# met http://localhost:3000.
+ALLOWED_ORIGIN = "https://elvar-drevos.github.io"
