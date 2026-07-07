@@ -5,8 +5,6 @@ export interface Env {
   // Optioneel: Adzuna API-sleutels (wrangler secret put ADZUNA_APP_ID / ADZUNA_APP_KEY)
   ADZUNA_APP_ID?: string;
   ADZUNA_APP_KEY?: string;
-  // Workers AI (vertaling Duits → Nederlands)
-  AI?: Ai;
 }
 
 export const STAGES = [

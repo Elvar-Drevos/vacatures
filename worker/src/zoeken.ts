@@ -10,7 +10,6 @@ import * as indeed from './scrapers/indeed';
 import * as nationalevacaturebank from './scrapers/nationalevacaturebank';
 import * as werkzoeken from './scrapers/werkzoeken';
 import * as adzuna from './bronnen/adzuna';
-import * as arbeitnow from './bronnen/arbeitnow';
 
 const SCRAPERS = [indeed, nationalevacaturebank, werkzoeken];
 
@@ -37,34 +36,6 @@ const NL_PATROON = new RegExp(
 function isNederlands(item: KandidaatVacature): boolean {
   const tekst = `${item.titel} ${item.bedrijf} ${item.locatie ?? ''} ${item.omschrijving ?? ''}`;
   return NL_PATROON.test(tekst);
-}
-
-// Herkenning van Duitstalige vacatureteksten (o.a. van Arbeitnow)
-const DUITS_PATROON =
-  /\b(und|nicht|eine[nmr]?|auch|werden|sind|dein[e]?|unser[e]?|erfahrung|kenntnisse|aufgaben|arbeitszeit|bewirb|stelle)\b/i;
-
-// Vertaalt Duitse titel/omschrijving naar het Nederlands via Workers AI.
-// Faalt stil (origineel behouden) als AI niet beschikbaar is of een fout geeft.
-async function vertaalDuitsNaarNederlands(env: Env, item: KandidaatVacature): Promise<KandidaatVacature> {
-  if (!env.AI) return item;
-  if (!DUITS_PATROON.test(`${item.titel} ${item.omschrijving ?? ''}`)) return item;
-  try {
-    const vertaal = async (text: string): Promise<string> => {
-      const uit = (await env.AI!.run('@cf/meta/m2m100-1.2b', {
-        text,
-        source_lang: 'de',
-        target_lang: 'nl',
-      })) as { translated_text?: string };
-      return uit.translated_text || text;
-    };
-    return {
-      ...item,
-      titel: await vertaal(item.titel),
-      omschrijving: item.omschrijving ? await vertaal(item.omschrijving) : null,
-    };
-  } catch {
-    return item;
-  }
 }
 
 // Importfilter: past de actieve zoekprofiel-criteria toe op binnenkomende items,
@@ -148,23 +119,6 @@ export async function zoekAlleBronnen(env: Env): Promise<ZoekResultaat[]> {
     } catch (err) {
       resultaten.push({ bron: 'adzuna', gevonden: 0, nieuw: 0, fout: String(err) });
     }
-  }
-
-  // Arbeitnow: gratis zonder sleutel; NL-filter houdt niet-Nederlandse items tegen
-  try {
-    const items = await arbeitnow.zoek();
-    let nieuw = 0;
-    for (const item of items) {
-      if (!magImporteren(item, profiel)) continue;
-      // Alleen vertalen wat daadwerkelijk geïmporteerd gaat worden (spaart AI-quota)
-      const bestaand = await env.DB.prepare('SELECT id FROM vacatures WHERE url = ?').bind(item.url).first();
-      if (bestaand) continue;
-      const vertaald = await vertaalDuitsNaarNederlands(env, item);
-      if (await insertAlsNieuw(env, vertaald, 'api:arbeitnow', null)) nieuw++;
-    }
-    resultaten.push({ bron: 'arbeitnow', gevonden: items.length, nieuw });
-  } catch (err) {
-    resultaten.push({ bron: 'arbeitnow', gevonden: 0, nieuw: 0, fout: String(err) });
   }
 
   // --- Scrapers (alleen als er een actief zoekcriterium is, anders is de zoekvraag te breed) ---
