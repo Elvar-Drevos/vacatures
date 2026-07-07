@@ -11,6 +11,10 @@ database_id = "aa1cc441-e956-4532-9f7c-db52618eca6d"
 # Zoekrun (RSS + API's + scrapers) twee keer per dag
 crons = ["0 6,18 * * *"]
 
+# Workers AI: gebruikt voor het vertalen van Duitse vacatures naar het Nederlands
+[ai]
+binding = "AI"
+
 [vars]
 # Productie-origin (GitHub Pages). Voor lokale dev overschrijft .dev.vars dit
 # met http://localhost:3000.

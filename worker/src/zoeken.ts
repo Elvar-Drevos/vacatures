@@ -39,6 +39,34 @@ function isNederlands(item: KandidaatVacature): boolean {
   return NL_PATROON.test(tekst);
 }
 
+// Herkenning van Duitstalige vacatureteksten (o.a. van Arbeitnow)
+const DUITS_PATROON =
+  /\b(und|nicht|eine[nmr]?|auch|werden|sind|dein[e]?|unser[e]?|erfahrung|kenntnisse|aufgaben|arbeitszeit|bewirb|stelle)\b/i;
+
+// Vertaalt Duitse titel/omschrijving naar het Nederlands via Workers AI.
+// Faalt stil (origineel behouden) als AI niet beschikbaar is of een fout geeft.
+async function vertaalDuitsNaarNederlands(env: Env, item: KandidaatVacature): Promise<KandidaatVacature> {
+  if (!env.AI) return item;
+  if (!DUITS_PATROON.test(`${item.titel} ${item.omschrijving ?? ''}`)) return item;
+  try {
+    const vertaal = async (text: string): Promise<string> => {
+      const uit = (await env.AI!.run('@cf/meta/m2m100-1.2b', {
+        text,
+        source_lang: 'de',
+        target_lang: 'nl',
+      })) as { translated_text?: string };
+      return uit.translated_text || text;
+    };
+    return {
+      ...item,
+      titel: await vertaal(item.titel),
+      omschrijving: item.omschrijving ? await vertaal(item.omschrijving) : null,
+    };
+  } catch {
+    return item;
+  }
+}
+
 // Importfilter: past de actieve zoekprofiel-criteria toe op binnenkomende items,
 // zodat de feed niet volloopt met irrelevante (buitenlandse) vacatures.
 function magImporteren(
@@ -128,7 +156,11 @@ export async function zoekAlleBronnen(env: Env): Promise<ZoekResultaat[]> {
     let nieuw = 0;
     for (const item of items) {
       if (!magImporteren(item, profiel)) continue;
-      if (await insertAlsNieuw(env, item, 'api:arbeitnow', null)) nieuw++;
+      // Alleen vertalen wat daadwerkelijk geïmporteerd gaat worden (spaart AI-quota)
+      const bestaand = await env.DB.prepare('SELECT id FROM vacatures WHERE url = ?').bind(item.url).first();
+      if (bestaand) continue;
+      const vertaald = await vertaalDuitsNaarNederlands(env, item);
+      if (await insertAlsNieuw(env, vertaald, 'api:arbeitnow', null)) nieuw++;
     }
     resultaten.push({ bron: 'arbeitnow', gevonden: items.length, nieuw });
   } catch (err) {
