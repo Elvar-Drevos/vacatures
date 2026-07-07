@@ -2,6 +2,9 @@ export interface Env {
   DB: D1Database;
   PASSCODE: string;
   ALLOWED_ORIGIN: string;
+  // Optioneel: Adzuna API-sleutels (wrangler secret put ADZUNA_APP_ID / ADZUNA_APP_KEY)
+  ADZUNA_APP_ID?: string;
+  ADZUNA_APP_KEY?: string;
 }
 
 export const STAGES = [

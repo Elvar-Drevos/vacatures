@@ -9,6 +9,8 @@ import type { KandidaatVacature } from './scrapers/common';
 import * as indeed from './scrapers/indeed';
 import * as nationalevacaturebank from './scrapers/nationalevacaturebank';
 import * as werkzoeken from './scrapers/werkzoeken';
+import * as adzuna from './bronnen/adzuna';
+import * as arbeitnow from './bronnen/arbeitnow';
 
 const SCRAPERS = [indeed, nationalevacaturebank, werkzoeken];
 
@@ -100,6 +102,37 @@ export async function zoekAlleBronnen(env: Env): Promise<ZoekResultaat[]> {
     } catch (err) {
       resultaten.push({ bron: `rss: ${feed.naam}`, gevonden: 0, nieuw: 0, fout: String(err) });
     }
+  }
+
+  // --- API-bronnen (officieel, betrouwbaarder dan scrapen) ---
+
+  // Adzuna: aggregeert Nederlandse jobboards; vereist gratis API-sleutels
+  if (env.ADZUNA_APP_ID && env.ADZUNA_APP_KEY) {
+    try {
+      const items = await adzuna.zoek(profiel, env.ADZUNA_APP_ID, env.ADZUNA_APP_KEY);
+      let nieuw = 0;
+      for (const item of items) {
+        // Adzuna/nl levert al uitsluitend Nederlandse vacatures
+        if (!magImporteren(item, profiel, true)) continue;
+        if (await insertAlsNieuw(env, item, 'api:adzuna', null)) nieuw++;
+      }
+      resultaten.push({ bron: 'adzuna', gevonden: items.length, nieuw });
+    } catch (err) {
+      resultaten.push({ bron: 'adzuna', gevonden: 0, nieuw: 0, fout: String(err) });
+    }
+  }
+
+  // Arbeitnow: gratis zonder sleutel; NL-filter houdt niet-Nederlandse items tegen
+  try {
+    const items = await arbeitnow.zoek();
+    let nieuw = 0;
+    for (const item of items) {
+      if (!magImporteren(item, profiel)) continue;
+      if (await insertAlsNieuw(env, item, 'api:arbeitnow', null)) nieuw++;
+    }
+    resultaten.push({ bron: 'arbeitnow', gevonden: items.length, nieuw });
+  } catch (err) {
+    resultaten.push({ bron: 'arbeitnow', gevonden: 0, nieuw: 0, fout: String(err) });
   }
 
   // --- Scrapers (alleen als er een actief zoekcriterium is, anders is de zoekvraag te breed) ---

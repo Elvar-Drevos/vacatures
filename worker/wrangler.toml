@@ -8,8 +8,8 @@ database_name = "vacatures-db"
 database_id = "aa1cc441-e956-4532-9f7c-db52618eca6d"
 
 [triggers]
-# Dagelijkse zoekrun (RSS + scrapers) om 06:00 UTC
-crons = ["0 6 * * *"]
+# Zoekrun (RSS + API's + scrapers) twee keer per dag
+crons = ["0 6,18 * * *"]
 
 [vars]
 # Productie-origin (GitHub Pages). Voor lokale dev overschrijft .dev.vars dit
